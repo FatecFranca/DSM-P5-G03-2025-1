@@ -1,5 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .db.database import engine, Base
 from .router.user_router import router as router_user
 from .router.auth_router import router as router_auth
@@ -16,9 +17,24 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}"
 )
 
-@app.on_event("startup")  # Evento que ocorre na inicialização do aplicativo
+# Configuração de CORS
+origins = [
+    "http://localhost:3000",  # Origem permitida (ajuste conforme seu front)
+    "http://127.0.0.1:3000",
+    "*"  # Liberar qualquer origem
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.on_event("startup")
 async def startup_event():
-    await create_tables()  # Chama a função para criar as tabelas
+    await create_tables()
 
 app.include_router(router_user)
 app.include_router(router_auth)

@@ -1,17 +1,22 @@
-import { StyleSheet, Image, ScrollView } from "react-native";
+import { StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { apiEndpoint } from "../../utils/api";
 import { Collapsible } from "@/components/Collapsible";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
   const [history, setHistory] = useState<any>({});
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<any>({});
+  const [loading, setLoading] = useState(false);
 
   const fetchHistory = async () => {
     try {
-      const response = await fetch(apiEndpoint("/history/1"));
+      setLoading(true);
+      const response = await fetch(apiEndpoint(`/history/${userInfo?.id}`));
       if (!response.ok) {
         throw new Error("Failed to fetch history");
       }
@@ -19,14 +24,43 @@ export default function HistoryScreen() {
       setHistory(data);
     } catch (error) {
       console.error("Error fetching history:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const fetchUserInfo = async () => {
+    try {
+      const response = await fetch(apiEndpoint("/users/"));
+      if (!response.ok) {
+        throw new Error("Failed to fetch user info");
+      }
+      const data = await response.json();
+      setUserInfo(data.items.find((user: any) => user.email === userEmail));
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+    }
+  };
+
+  // Busca o email salvo no AsyncStorage
   useEffect(() => {
-    fetchHistory();
+    const getEmail = async () => {
+      const email = await AsyncStorage.getItem("userEmail");
+      setUserEmail(email);
+    };
+    getEmail();
   }, []);
 
-  console.log("History data:", history);
+    useEffect(() => {
+    fetchUserInfo();
+  }, []);
+
+
+  useEffect(() => {
+    if (userInfo?.id) {
+      fetchHistory();
+    }
+  }, [userInfo]);
 
   return (
     <ThemedView style={styles.container}>
@@ -43,6 +77,21 @@ export default function HistoryScreen() {
             Histórico
           </ThemedText>
         </ThemedView>
+        {/* Botão de refresh centralizado abaixo do título */}
+        <ThemedView style={{ alignItems: "center", marginTop: 8, marginBottom: 4, backgroundColor: "#1a1f2b" }}>
+          <TouchableOpacity
+            onPress={fetchHistory}
+            style={styles.refreshButton}
+            disabled={loading}
+            accessibilityLabel="Atualizar histórico"
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#e46827" />
+            ) : (
+              <ThemedText style={{ fontSize: 22, color: "#e46827" }}>⟳</ThemedText>
+            )}
+          </TouchableOpacity>
+        </ThemedView>
         <ThemedView style={styles.subtitleContainer}>
           <ThemedText
             style={{
@@ -58,7 +107,15 @@ export default function HistoryScreen() {
         <ThemedView style={styles.stepContainer}>
           {/* Renderiza o histórico vindo do backend */}
           {history && history.player_name ? (
-            <Collapsible title={`${history.classification?.toUpperCase() || ""} ${history.created_at?.slice(0, 10).split("-").reverse().join("/") || ""}`}>
+            <Collapsible
+              title={`${history.classification?.toUpperCase() || ""} ${
+                history.created_at
+                  ?.slice(0, 10)
+                  .split("-")
+                  .reverse()
+                  .join("/") || ""
+              }`}
+            >
               <ThemedView style={styles.itemContainer}>
                 <ThemedText style={{ color: "#fff" }}>
                   <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
@@ -108,7 +165,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 16,
     backgroundColor: "#1a1f2b",
-    marginTop: 15,
   },
   headerContainer: {
     backgroundColor: "#e46827",
@@ -127,13 +183,14 @@ const styles = StyleSheet.create({
   logo: {
     width: 150,
     height: 150,
-    marginTop: 10,
+    marginTop: 20,
   },
   titleContainer: {
-    flexDirection: "column",
+    flexDirection: "row", // alterado para row para alinhar botão e título
     backgroundColor: "#1a1f2b",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: 10,
   },
   title: {
     fontSize: 50,
@@ -166,5 +223,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     padding: 8,
     borderRadius: 20,
+  },
+  refreshButton: {
+    marginLeft: 8,
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: "transparent",
   },
 });

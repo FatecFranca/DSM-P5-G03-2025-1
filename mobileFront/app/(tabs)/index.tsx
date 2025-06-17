@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   Image,
   StyleSheet,
@@ -11,17 +10,89 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
+import React, { useState, useEffect } from "react";
+import { apiEndpoint } from "../../utils/api";
 
 export default function HomeScreen() {
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<any>({});
   const [position, setPosition] = useState("");
-  const [points, setPoints] = useState("");
   const [rebounds, setRebounds] = useState("");
   const [assists, setAssists] = useState("");
+  const [points, setPoints] = useState("");
 
-  const handleSubmit = () => {
-    Alert.alert("Dados Enviados", "Obrigado por enviar suas estatísticas!");
+  const handleSubmit = async () => {
+    if (!position || !points || !rebounds || !assists) {
+      Alert.alert("Erro", "Preencha todos os campos!");
+      return;
+    }
+    if (!userInfo?.id || !userInfo?.name) {
+      Alert.alert("Erro", "Informações do usuário não encontradas.");
+      return;
+    }
+    try {
+      const url = apiEndpoint(
+        `/classification/?player_name=${encodeURIComponent(userInfo.name)}&user_id=${userInfo.id}`
+      );
+      const body = {
+        position: position,
+        points_per_game: Number(points),
+        assists_per_game: Number(assists),
+        rebounds_per_game: Number(rebounds),
+      };
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new Error("Erro ao enviar estatísticas");
+      }
+      const data = await response.json();
+      Alert.alert(
+        "Dados Enviados",
+        `Jogador: ${data.player_name}\nClassificação: ${data.classification}\n${data.message}`
+      );
+      // Opcional: limpar campos após envio
+      setPosition("");
+      setPoints("");
+      setAssists("");
+      setRebounds("");
+    } catch (error) {
+      Alert.alert("Erro", "Não foi possível enviar as estatísticas.");
+      console.error(error);
+    }
   };
+
+  const fetchUserInfo = async () => {
+    try {
+      const response = await fetch(apiEndpoint("/users/"));
+      if (!response.ok) {
+        throw new Error("Failed to fetch user info");
+      }
+      const data = await response.json();
+      setUserInfo(data.items.find((user: any) => user.email === userEmail));
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+    }
+  };
+
+  // Busca o email salvo no AsyncStorage
+  useEffect(() => {
+    const getEmail = async () => {
+      const email = await AsyncStorage.getItem("userEmail");
+      setUserEmail(email);
+    };
+    getEmail();
+  }, []);
+
+  useEffect(() => {
+    fetchUserInfo();
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -40,7 +111,9 @@ export default function HomeScreen() {
         </View>
         <View style={styles.titleContainer}>
           <Text style={styles.title}>HOOP VISION</Text>
-          <Text style={styles.subtitle}>Registre suas estatísticas do jogo</Text>
+          <Text style={styles.subtitle}>
+            Registre suas estatísticas do jogo
+          </Text>
         </View>
         <View style={styles.formWrapper}>
           <View style={styles.inputContainer}>
@@ -102,15 +175,17 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     shadowColor: "#000",
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
     marginBottom: 4,
+    marginTop: 0,
   },
   mainLogo: {
     width: 130,
     height: 130,
     resizeMode: "contain",
+    marginTop: 10,
   },
   titleContainer: {
     alignItems: "center",
@@ -147,7 +222,7 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 6,
     marginBottom: 20,

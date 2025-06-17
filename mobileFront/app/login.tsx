@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiEndpoint } from "../utils/api";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
@@ -32,6 +33,8 @@ export default function Login() {
       }
 
       const data = await response.json();
+      // Salva o email no AsyncStorage
+      await AsyncStorage.setItem("userEmail", user);
       alert("Login realizado com sucesso!");
       router.replace("/(tabs)");
     } catch (error) {

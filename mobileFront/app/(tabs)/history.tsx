@@ -1,11 +1,33 @@
 import { StyleSheet, Image, ScrollView } from "react-native";
-
+import { apiEndpoint } from "../../utils/api";
 import { Collapsible } from "@/components/Collapsible";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
+import { useEffect, useState } from "react";
 
 export default function HistoryScreen() {
+  const [history, setHistory] = useState<any>({});
+
+  const fetchHistory = async () => {
+    try {
+      const response = await fetch(apiEndpoint("/history/1"));
+      if (!response.ok) {
+        throw new Error("Failed to fetch history");
+      }
+      const data = await response.json();
+      setHistory(data);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  console.log("History data:", history);
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
@@ -34,74 +56,47 @@ export default function HistoryScreen() {
           </ThemedText>
         </ThemedView>
         <ThemedView style={styles.stepContainer}>
-          <Collapsible title="ALL-STAR 10/02/2025">
-            <ThemedView style={styles.itemContainer}>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Posição:
-                </ThemedText>{" "}
-                Armador
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Pontos:
-                </ThemedText>{" "}
-                33
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Assintências:
-                </ThemedText>{" "}
-                9
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Rebotes:
-                </ThemedText>{" "}
-                11
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Tocos:
-                </ThemedText>{" "}
-                1
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
-          <Collapsible title="ROLE PLAYER 04/04/2025">
-            <ThemedView style={styles.itemContainer}>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Posição:
-                </ThemedText>{" "}
-                Armador
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Pontos:
-                </ThemedText>{" "}
-                33
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Assintências:
-                </ThemedText>{" "}
-                9
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Rebotes:
-                </ThemedText>{" "}
-                11
-              </ThemedText>
-              <ThemedText style={{ color: "#fff" }}>
-                <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
-                  Tocos:
-                </ThemedText>{" "}
-                1
-              </ThemedText>
-            </ThemedView>
-          </Collapsible>
+          {/* Renderiza o histórico vindo do backend */}
+          {history && history.player_name ? (
+            <Collapsible title={`${history.classification?.toUpperCase() || ""} ${history.created_at?.slice(0, 10).split("-").reverse().join("/") || ""}`}>
+              <ThemedView style={styles.itemContainer}>
+                <ThemedText style={{ color: "#fff" }}>
+                  <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
+                    Nome:
+                  </ThemedText>{" "}
+                  {history.player_name}
+                </ThemedText>
+                <ThemedText style={{ color: "#fff" }}>
+                  <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
+                    Posição:
+                  </ThemedText>{" "}
+                  {history.position}
+                </ThemedText>
+                <ThemedText style={{ color: "#fff" }}>
+                  <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
+                    Pontos:
+                  </ThemedText>{" "}
+                  {history.average_points}
+                </ThemedText>
+                <ThemedText style={{ color: "#fff" }}>
+                  <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
+                    Assistências:
+                  </ThemedText>{" "}
+                  {history.average_assists}
+                </ThemedText>
+                <ThemedText style={{ color: "#fff" }}>
+                  <ThemedText type="defaultSemiBold" style={{ color: "#fff" }}>
+                    Rebotes:
+                  </ThemedText>{" "}
+                  {history.average_rebounds}
+                </ThemedText>
+              </ThemedView>
+            </Collapsible>
+          ) : (
+            <ThemedText style={{ color: "#fff", textAlign: "center" }}>
+              Nenhum histórico encontrado.
+            </ThemedText>
+          )}
         </ThemedView>
       </ScrollView>
     </ThemedView>
@@ -113,6 +108,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 16,
     backgroundColor: "#1a1f2b",
+    marginTop: 15,
   },
   headerContainer: {
     backgroundColor: "#e46827",
@@ -144,7 +140,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#e46827",
     textAlignVertical: "center",
-
     margin: 0,
     padding: 0,
     textAlign: "center",

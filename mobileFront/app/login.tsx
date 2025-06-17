@@ -1,11 +1,44 @@
+import {
+  View,
+  TextInput,
+  Button,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { apiEndpoint } from "../utils/api";
 import React, { useState } from "react";
-import { View, TextInput, Button, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function Login() {
   const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+
+  const handleLogin = async () => {
+    try {
+      const response = await fetch(apiEndpoint("/auth/login"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: user, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao fazer login");
+      }
+
+      const data = await response.json();
+      alert("Login realizado com sucesso!");
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+      alert("Erro ao fazer login. Verifique suas credenciais e tente novamente.");
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -18,7 +51,7 @@ export default function Login() {
         <Text style={styles.subtitle}>Seu desempenho, no nível da liga</Text>
         <TextInput
           style={styles.input}
-          placeholder="Usuário"
+          placeholder="Email"
           placeholderTextColor="#bbb"
           value={user}
           onChangeText={setUser}
@@ -33,7 +66,8 @@ export default function Login() {
         />
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => router.replace("/(tabs)")}
+          // onPress={() => router.replace("/(tabs)")}
+          onPress={handleLogin}
         >
           <Text style={styles.loginButtonText}>Entrar</Text>
         </TouchableOpacity>

@@ -2,17 +2,17 @@ import {
   Image,
   StyleSheet,
   TextInput,
-  Alert,
   View,
   TouchableOpacity,
   Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { apiEndpoint } from "../../utils/api";
 
 export default function HomeScreen() {
@@ -22,19 +22,62 @@ export default function HomeScreen() {
   const [rebounds, setRebounds] = useState("");
   const [assists, setAssists] = useState("");
   const [points, setPoints] = useState("");
+  
+  // Alert states
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<"success" | "error">("success");
+  const [alertDetail, setAlertDetail] = useState("");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (alertVisible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // erro 3seg / sucesso 6seg
+      const timer = setTimeout(() => {
+        hideAlert();
+      }, alertType === "error" ? 3000 : 6000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [alertVisible]);
+
+  const showAlert = (message: string, type: "success" | "error", detail: string = "") => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertDetail(detail);
+    setAlertVisible(true);
+  };
+
+  const hideAlert = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setAlertVisible(false);
+    });
+  };
 
   const handleSubmit = async () => {
     if (!position || !points || !rebounds || !assists) {
-      Alert.alert("Erro", "Preencha todos os campos!");
+      showAlert("Preencha todos os campos!", "error");
       return;
     }
-    if (!userInfo?.id || !userInfo?.name) {
-      Alert.alert("Erro", "Informações do usuário não encontradas.");
+    if (!userInfo?.id) {
+      showAlert("Informações do usuário não encontradas.", "error");
       return;
     }
     try {
       const url = apiEndpoint(
-        `/classification/?player_name=${encodeURIComponent(userInfo.name)}&user_id=${userInfo.id}`
+        `/classification/?player_name=${encodeURIComponent(
+          userInfo.name
+        )}&user_id=${userInfo.id}`
       );
       const body = {
         position: position,
@@ -53,29 +96,40 @@ export default function HomeScreen() {
         throw new Error("Erro ao enviar estatísticas");
       }
       const data = await response.json();
-      Alert.alert(
-        "Dados Enviados",
+      
+      // Informações de sucesso
+      showAlert(
+        `Estatísticas enviadas com sucesso!`,
+        "success",
         `Jogador: ${data.player_name}\nClassificação: ${data.classification}\n${data.message}`
       );
-      // Opcional: limpar campos após envio
+      
+      // Limpar campos após envio
       setPosition("");
       setPoints("");
       setAssists("");
       setRebounds("");
     } catch (error) {
-      Alert.alert("Erro", "Não foi possível enviar as estatísticas.");
+      showAlert("Não foi possível enviar as estatísticas.", "error");
       console.error(error);
     }
   };
 
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = async (email: string | null) => {
+    if (!email) return;
+
     try {
       const response = await fetch(apiEndpoint("/users/"));
       if (!response.ok) {
         throw new Error("Failed to fetch user info");
       }
       const data = await response.json();
-      setUserInfo(data.items.find((user: any) => user.email === userEmail));
+      const foundUser = data.items.find((user: any) => user.email === email);
+      if (foundUser) {
+        setUserInfo(foundUser);
+      } else {
+        console.log("User not found with email:", email);
+      }
     } catch (error) {
       console.error("Error fetching user info:", error);
     }
@@ -84,14 +138,18 @@ export default function HomeScreen() {
   // Busca o email salvo no AsyncStorage
   useEffect(() => {
     const getEmail = async () => {
-      const email = await AsyncStorage.getItem("userEmail");
-      setUserEmail(email);
+      try {
+        const email = await AsyncStorage.getItem("userEmail");
+        setUserEmail(email);
+
+        if (email) {
+          fetchUserInfo(email);
+        }
+      } catch (error) {
+        console.error("Error getting email from storage:", error);
+      }
     };
     getEmail();
-  }, []);
-
-  useEffect(() => {
-    fetchUserInfo();
   }, []);
 
   return (
@@ -162,11 +220,110 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+      
+      {/* Custom Alert */}
+      {alertVisible && (
+        <Animated.View 
+          style={[
+            alertType === "success" && alertDetail ? styles.successDetailAlert : styles.alertContainer, 
+            alertType === "success" ? styles.successAlert : styles.errorAlert,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <Text style={styles.alertTitle}>
+            {alertType === "success" ? "✅ " : "❌ "}{alertMessage}
+          </Text>
+          
+          {alertDetail ? (
+            <Text style={styles.alertDetail}>{alertDetail}</Text>
+          ) : null}
+          
+          <TouchableOpacity onPress={hideAlert} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>×</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  alertContainer: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    elevation: 6,
+  },
+  successDetailAlert: {
+    position: 'absolute',
+    top: '50%',
+    left: 20,
+    right: 20,
+    padding: 20,
+    borderRadius: 10,
+    flexDirection: 'column',
+    justifyContent: "flex-start",
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  successAlert: {
+    backgroundColor: '#43a047',
+    borderLeftWidth: 5,
+    borderLeftColor: '#2e7d32',
+  },
+  errorAlert: {
+    backgroundColor: '#e53935',
+    borderLeftWidth: 5,
+    borderLeftColor: '#c62828',
+  },
+  alertTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  alertDetail: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 10,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerContainer: {
     height: 120,
     justifyContent: "center",

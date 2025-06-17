@@ -1,12 +1,50 @@
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
+import { apiEndpoint } from "../utils/api";
 import React, { useState } from "react";
-import { View, TextInput, StyleSheet, Text, TouchableOpacity, KeyboardAvoidingView, Platform } from "react-native";
 import { useRouter } from "expo-router";
 
 export default function Register() {
   const [user, setUser] = useState("");
+  const [email, setEmail] = useState(""); // novo estado para email
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
+
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      alert("As senhas não coincidem!");
+      return;
+    }
+
+    try {
+      const response = await fetch(apiEndpoint("/users/register"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: user, email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao registrar usuário");
+      }
+
+      const data = await response.json();
+      alert("Usuário registrado com sucesso!");
+      router.replace("/login");
+    } catch (error) {
+      console.error("Erro ao registrar:", error);
+      alert("Erro ao registrar usuário. Tente novamente.");
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -17,6 +55,15 @@ export default function Register() {
         <Text style={styles.logo}>🏀</Text>
         <Text style={styles.title}>Hoop Vision</Text>
         <Text style={styles.subtitle}>Crie sua conta</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          placeholderTextColor="#bbb"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
         <TextInput
           style={styles.input}
           placeholder="Usuário"
@@ -43,7 +90,7 @@ export default function Register() {
         <TouchableOpacity
           style={styles.registerButton}
           onPress={() => {
-            // Sem ação por enquanto
+            handleRegister();
           }}
         >
           <Text style={styles.registerButtonText}>Registrar</Text>

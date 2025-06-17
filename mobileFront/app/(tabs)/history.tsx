@@ -4,14 +4,14 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
+  Animated,
 } from "react-native";
 import { apiEndpoint } from "../../utils/api";
 import { Collapsible } from "@/components/Collapsible";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
@@ -25,6 +25,54 @@ export default function HistoryScreen() {
   const [userInfo, setUserInfo] = useState<any>({});
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Alert states
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [alertType, setAlertType] = useState<"success" | "error" | "warning">(
+    "success"
+  );
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Alert functions
+  useEffect(() => {
+    if (alertVisible) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      // Apenas fecha automaticamente se não for um alerta de warning
+      if (alertType !== "warning") {
+        const timer = setTimeout(() => {
+          hideAlert();
+        }, 3000);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [alertVisible]);
+
+  const showAlert = (
+    message: string,
+    type: "success" | "error" | "warning"
+  ) => {
+    setAlertMessage(message);
+    setAlertType(type);
+    setAlertVisible(true);
+  };
+
+  const hideAlert = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setAlertVisible(false);
+    });
+  };
 
   const fetchHistory = async (page = 1) => {
     try {
@@ -45,8 +93,12 @@ export default function HistoryScreen() {
         total: data.total,
         total_pages: data.total_pages,
       });
+      if (page === 1) {
+        showAlert("Histórico atualizado com sucesso", "success");
+      }
     } catch (error) {
       console.error("Error fetching history:", error);
+      showAlert("Erro ao carregar histórico", "error");
     } finally {
       setLoading(false);
     }
@@ -62,6 +114,7 @@ export default function HistoryScreen() {
       setUserInfo(data.items.find((user: any) => user.email === userEmail));
     } catch (error) {
       console.error("Error fetching user info:", error);
+      showAlert("Erro ao carregar informações do usuário", "error");
     }
   };
 
@@ -100,38 +153,40 @@ export default function HistoryScreen() {
 
   const deleteHistoryItem = async (id: number) => {
     try {
-      // Confirmação antes de deletar
-      Alert.alert(
-        "Confirmar exclusão",
-        "Tem certeza que deseja excluir este item do histórico?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Excluir",
-            style: "destructive",
-            onPress: async () => {
-              setLoading(true);
-              const response = await fetch(apiEndpoint(`/history/${id}`), {
-                method: "DELETE",
-              });
+      setLoading(true);
+      const response = await fetch(apiEndpoint(`/history/${id}`), {
+        method: "DELETE",
+      });
 
-              if (!response.ok) {
-                throw new Error("Failed to delete history item");
-              }
+      if (!response.ok) {
+        throw new Error("Failed to delete history item");
+      }
 
-              // Atualiza o histórico após exclusão
-              fetchHistory(pagination.page);
-              Alert.alert("Sucesso", "Item excluído com sucesso!");
-            },
-          },
-        ]
-      );
+      // Atualiza o histórico após exclusão
+      fetchHistory(pagination.page);
+      showAlert("Item excluído com sucesso!", "success");
     } catch (error) {
       console.error("Error deleting history item:", error);
-      Alert.alert("Erro", "Não foi possível excluir o item");
+      showAlert("Não foi possível excluir o item", "error");
     } finally {
       setLoading(false);
+      setPendingDeleteId(null);
     }
+  };
+
+  const confirmDelete = (id: number) => {
+    // Salva o ID
+    setPendingDeleteId(id);
+
+    showAlert("Deseja realmente excluir este item?", "warning");
+  };
+
+  // Função para lidar com a confirmação do alerta
+  const handleAlertAction = () => {
+    if (alertType === "warning" && pendingDeleteId !== null) {
+      deleteHistoryItem(pendingDeleteId);
+    }
+    hideAlert();
   };
 
   return (
@@ -208,12 +263,14 @@ export default function HistoryScreen() {
                     <TouchableOpacity
                       onPress={(e) => {
                         e.stopPropagation();
-                        deleteHistoryItem(item.id);
+                        confirmDelete(item.id);
                       }}
                       style={styles.deleteButton}
                       accessibilityLabel="Excluir histórico"
                     >
-                      <ThemedText style={styles.deleteButtonText}>🗑️</ThemedText>
+                      <ThemedText style={styles.deleteButtonText}>
+                        🗑️
+                      </ThemedText>
                     </TouchableOpacity>
                   }
                 >
@@ -310,11 +367,135 @@ export default function HistoryScreen() {
           )}
         </ThemedView>
       </ScrollView>
+
+      {/* Alert customizado */}
+      {alertVisible && (
+        <Animated.View
+          style={[
+            styles.alertContainer,
+            alertType === "success"
+              ? styles.successAlert
+              : alertType === "warning"
+              ? styles.warningAlert
+              : styles.errorAlert,
+            { opacity: fadeAnim },
+            alertType === "warning" && styles.centeredAlert,
+          ]}
+        >
+          <ThemedText
+            style={[
+              styles.alertText,
+              alertType === "warning" && styles.warningAlertText,
+            ]}
+          >
+            {alertType === "success"
+              ? "✅ "
+              : alertType === "warning"
+              ? "⚠️ "
+              : "❌ "}
+            {alertMessage}
+          </ThemedText>
+
+          {alertType === "warning" ? (
+            <ThemedView style={styles.alertActionContainer}>
+              <TouchableOpacity
+                onPress={handleAlertAction}
+                style={styles.alertActionButton}
+              >
+                <ThemedText style={styles.alertActionText}>Sim</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={hideAlert}
+                style={[styles.alertActionButton, styles.cancelButton]}
+              >
+                <ThemedText style={styles.alertActionText}>Não</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          ) : (
+            <TouchableOpacity onPress={hideAlert} style={styles.closeButton}>
+              <ThemedText style={styles.closeButtonText}>×</ThemedText>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+      )}
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  alertContainer: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+    right: 20,
+    padding: 15,
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    elevation: 6,
+  },
+  successAlert: {
+    backgroundColor: "#43a047",
+    borderLeftWidth: 5,
+    borderLeftColor: "#2e7d32",
+  },
+  errorAlert: {
+    backgroundColor: "#e53935",
+    borderLeftWidth: 5,
+    borderLeftColor: "#c62828",
+  },
+  warningAlert: {
+    backgroundColor: "#ff9800",
+    padding: 20,
+    flexDirection: "column",
+  },
+  centeredAlert: {
+    position: "absolute",
+    top: "50%",
+    left: "10%",
+    right: "10%",
+    transform: [{ translateY: -50 }],
+    width: "80%",
+    maxWidth: 400,
+    alignSelf: "center",
+    borderRadius: 15,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "#e65100",
+  },
+  alertText: {
+    color: "#fff",
+    fontSize: 16,
+    flex: 1,
+  },
+  warningAlertText: {
+    textAlign: "center",
+    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  closeButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
   container: {
     flex: 1,
     gap: 16,
@@ -365,7 +546,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   titleContainer: {
-    flexDirection: "row", // alterado para row para alinhar botão e título
+    flexDirection: "row",
     backgroundColor: "#1a1f2b",
     justifyContent: "center",
     alignItems: "center",
@@ -419,5 +600,28 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     fontSize: 16,
     color: "#ff5252",
+  },
+  alertActionContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
+    gap: 20,
+    backgroundColor: "#ff9800",
+  },
+  alertActionButton: {
+    backgroundColor: "#e46827",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#555",
+  },
+  alertActionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });

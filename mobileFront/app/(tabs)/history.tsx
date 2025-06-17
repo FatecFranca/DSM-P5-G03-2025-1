@@ -244,11 +244,11 @@ export default function HistoryScreen() {
           {/* Renderiza o histórico vindo do backend, ordenando do mais recente para o mais antigo */}
           {history.length > 0 ? (
             [...history]
-              .sort(
-                (a, b) =>
-                  new Date(b.created_at).getTime() -
-                  new Date(a.created_at).getTime()
-              )
+              // .sort(
+              //   (a, b) =>
+              //     new Date(b.created_at).getTime() -
+              //     new Date(a.created_at).getTime()
+              // )
               .map((item, index) => (
                 <Collapsible
                   key={index}

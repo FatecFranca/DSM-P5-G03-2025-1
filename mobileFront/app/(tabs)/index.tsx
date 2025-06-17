@@ -22,7 +22,7 @@ export default function HomeScreen() {
   const [rebounds, setRebounds] = useState("");
   const [assists, setAssists] = useState("");
   const [points, setPoints] = useState("");
-  
+
   // Alert states
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
@@ -37,17 +37,24 @@ export default function HomeScreen() {
         duration: 300,
         useNativeDriver: true,
       }).start();
-      
+
       // erro 3seg / sucesso 6seg
-      const timer = setTimeout(() => {
-        hideAlert();
-      }, alertType === "error" ? 3000 : 6000);
-      
+      const timer = setTimeout(
+        () => {
+          hideAlert();
+        },
+        alertType === "error" ? 3000 : 6000
+      );
+
       return () => clearTimeout(timer);
     }
   }, [alertVisible]);
 
-  const showAlert = (message: string, type: "success" | "error", detail: string = "") => {
+  const showAlert = (
+    message: string,
+    type: "success" | "error",
+    detail: string = ""
+  ) => {
     setAlertMessage(message);
     setAlertType(type);
     setAlertDetail(detail);
@@ -96,14 +103,14 @@ export default function HomeScreen() {
         throw new Error("Erro ao enviar estatísticas");
       }
       const data = await response.json();
-      
+
       // Informações de sucesso
       showAlert(
         `Estatísticas enviadas com sucesso!`,
         "success",
         `Jogador: ${data.player_name}\nClassificação: ${data.classification}\n${data.message}`
       );
-      
+
       // Limpar campos após envio
       setPosition("");
       setPoints("");
@@ -170,7 +177,10 @@ export default function HomeScreen() {
         <View style={styles.titleContainer}>
           <Text style={styles.title}>HOOP VISION</Text>
           <Text style={styles.subtitle}>
-            Registre suas estatísticas do jogo
+            {`Oi, ${userInfo.name || "Jogador"}! 🏀`}
+          </Text>
+          <Text style={styles.subtitle}>
+            Registre suas estatísticas
           </Text>
         </View>
         <View style={styles.formWrapper}>
@@ -220,24 +230,27 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-      
+
       {/* Custom Alert */}
       {alertVisible && (
-        <Animated.View 
+        <Animated.View
           style={[
-            alertType === "success" && alertDetail ? styles.successDetailAlert : styles.alertContainer, 
+            alertType === "success" && alertDetail
+              ? styles.successDetailAlert
+              : styles.alertContainer,
             alertType === "success" ? styles.successAlert : styles.errorAlert,
-            { opacity: fadeAnim }
+            { opacity: fadeAnim },
           ]}
         >
           <Text style={styles.alertTitle}>
-            {alertType === "success" ? "✅ " : "❌ "}{alertMessage}
+            {alertType === "success" ? "✅ " : "❌ "}
+            {alertMessage}
           </Text>
-          
+
           {alertDetail ? (
             <Text style={styles.alertDetail}>{alertDetail}</Text>
           ) : null}
-          
+
           <TouchableOpacity onPress={hideAlert} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>×</Text>
           </TouchableOpacity>
@@ -249,15 +262,15 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   alertContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 40,
     left: 20,
     right: 20,
     padding: 15,
     borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -268,15 +281,15 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   successDetailAlert: {
-    position: 'absolute',
-    top: '50%',
+    position: "absolute",
+    top: "50%",
     left: 20,
     right: 20,
     padding: 20,
     borderRadius: 10,
-    flexDirection: 'column',
+    flexDirection: "column",
     justifyContent: "flex-start",
-    alignItems: 'center',
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -287,42 +300,42 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   successAlert: {
-    backgroundColor: '#43a047',
+    backgroundColor: "#43a047",
     borderLeftWidth: 5,
-    borderLeftColor: '#2e7d32',
+    borderLeftColor: "#2e7d32",
   },
   errorAlert: {
-    backgroundColor: '#e53935',
+    backgroundColor: "#e53935",
     borderLeftWidth: 5,
-    borderLeftColor: '#c62828',
+    borderLeftColor: "#c62828",
   },
   alertTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 5,
   },
   alertDetail: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     marginTop: 10,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 24,
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
     width: 24,
     height: 24,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerContainer: {
     height: 120,

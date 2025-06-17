@@ -1,5 +1,6 @@
 import { StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -7,6 +8,20 @@ import { TouchableOpacity } from "react-native";
 
 export default function AboutScreen() {
   const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      // Clear all stored user data
+      await AsyncStorage.removeItem("userEmail");
+      // You can add any other user data that needs to be cleared
+      // await AsyncStorage.removeItem("otherUserData");
+
+      // Navigate to login screen
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -41,7 +56,7 @@ export default function AboutScreen() {
       </ThemedView>
       <TouchableOpacity
         style={styles.button}
-        onPress={() => router.replace("/login")}
+        onPress={handleLogout}
       >
         <ThemedText style={styles.buttonText}>Sair</ThemedText>
       </TouchableOpacity>

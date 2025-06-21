@@ -26,22 +26,22 @@ O front-end é uma aplicação mobile desenvolvida com **React Native + Expo SDK
 
 
 #### 🏠 Tela Inicial
-![Tela Inicial](./DOCUMENTAÇÃO/front_2.jpg)
+![Tela Inicial](./doc/front_2.jpg)
 
 #### 🏀 Tela de Classificação
-![Tela Classificação](./DOCUMENTAÇÃO/front_3.jpg)
+![Tela Classificação](./doc/front_3.jpg)
 
 #### 📊 Tela de Histórico
-![Tela Resultado](./DOCUMENTAÇÃO/front_4.jpg)
+![Tela Resultado](./doc/front_4.jpg)
 
 #### 👤 Tela de Histórico 2
-![Tela Perfil](./DOCUMENTAÇÃO/front_5.jpg)
+![Tela Perfil](./doc/front_5.jpg)
 
 #### ⚙️ Tela de Histórico 3
-![Tela Configurações](./DOCUMENTAÇÃO/front_7.jpg)
+![Tela Configurações](./doc/front_7.jpg)
 
 #### 🔍 Tela de Detalhes
-![Tela Detalhes](./DOCUMENTAÇÃO/front_8.jpg)
+![Tela Detalhes](./doc/front_8.jpg)
 
 
 ### 📦 Instalação e execução
